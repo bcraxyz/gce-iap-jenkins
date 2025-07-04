@@ -19,11 +19,12 @@ resource "google_project_service" "enabled_apis" {
     "compute.googleapis.com",
     "oslogin.googleapis.com",
     "iap.googleapis.com",
+    "cloudresourcemanager.googleapis.com",
     "certificatemanager.googleapis.com"
   ])
 
   project            = var.project_id
-  service            = each.key
+  service            = each.value
   disable_on_destroy = false
 }
 
@@ -55,6 +56,20 @@ resource "google_compute_firewall" "allow_iap_ssh" {
   target_tags   = ["mautic-vm"]
 }
 
+resource "google_compute_firewall" "allow_lb_https" {
+  name    = "allow-lb-https"
+  network = google_compute_network.mautic_network.name
+
+  allow {
+    protocol = "tcp"
+    ports    = ["443"]
+  }
+
+  # Source ranges for Google Cloud Load Balancer health checks and traffic
+  source_ranges = ["130.211.0.0/22", "35.191.0.0/16"]
+  target_tags   = ["mautic-vm"]
+}
+
 # Create custom service account and IAM bindings
 resource "google_service_account" "mautic_sa" {
   account_id   = "mautic-vm-sa"
@@ -80,17 +95,17 @@ resource "google_compute_instance" "mautic_vm" {
   name         = "mautic-vm"
   machine_type = "e2-medium"
   zone         = var.zone
+  tags         = ["mautic-vm"]
 
   boot_disk {
     initialize_params {
-      image = "bitnami-mautic"
+      image = "bitnami-launchpad/mautic"
     }
   }
 
   network_interface {
     network    = google_compute_network.mautic_network.id
     subnetwork = google_compute_subnetwork.mautic_subnet.id
-    access_config      = [] # disables public IP
   }
 
   service_account {
@@ -128,7 +143,7 @@ resource "google_compute_instance_group" "mautic_uig" {
   }
 }
 
-# Create HTTPS Load Balancer resources
+# Create HTTPS Load Balancer related resources
 resource "google_compute_health_check" "mautic_hc" {
   name               = "mautic-health-check"
   check_interval_sec = 10
@@ -160,12 +175,16 @@ resource "google_compute_url_map" "mautic_url_map" {
 
 resource "google_compute_url_map" "mautic_redirect_map" {
   name            = "mautic-redirect-map"
-  default_service = google_compute_backend_service.mautic_backend.id
+  
   default_url_redirect {
     https_redirect         = true
     strip_query            = false
     redirect_response_code = "MOVED_PERMANENTLY_DEFAULT"
   }
+}
+
+resource "google_compute_global_address" "mautic_ip" {
+  name = "mautic-ip"
 }
 
 resource "google_compute_managed_ssl_certificate" "mautic_cert" {
@@ -190,6 +209,15 @@ resource "google_compute_global_forwarding_rule" "mautic_https_forwarding_rule" 
   name                  = "https-forwarding-rule"
   target                = google_compute_target_https_proxy.mautic_https_proxy.id
   port_range            = "443"
+  load_balancing_scheme = "EXTERNAL"
+  ip_protocol           = "TCP"
+}
+
+resource "google_compute_global_forwarding_rule" "mautic_http_forwarding_rule" {
+  name                  = "http-forwarding-rule"
+  target                = google_compute_target_http_proxy.mautic_http_proxy.id
+  ip_address            = google_compute_global_address.mautic_ip.id
+  port_range            = "80"
   load_balancing_scheme = "EXTERNAL"
   ip_protocol           = "TCP"
 }
