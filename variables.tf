@@ -24,3 +24,8 @@ variable "domain_name" {
   description = "Domain name for SSL certificate"
   type        = string
 }
+
+variable "iap_user_email" {
+  description = "Email address of the user who will access VM via IAP"
+  type        = string
+}
