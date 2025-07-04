@@ -30,23 +30,23 @@ resource "google_project_service" "enabled_apis" {
 }
 
 # Set up custom network, subnet and firewall rules
-resource "google_compute_network" "mautic_network" {
-  name                    = "mautic-network"
+resource "google_compute_network" "jenkins_network" {
+  name                    = "jenkins-network"
   auto_create_subnetworks = false
 
   depends_on              = [google_project_service.enabled_apis]
 }
 
-resource "google_compute_subnetwork" "mautic_subnet" {
-  name          = "mautic-subnet"
+resource "google_compute_subnetwork" "jenkins_subnet" {
+  name          = "jenkins-subnet"
   ip_cidr_range = "10.140.1.0/24"
-  network       = google_compute_network.mautic_network.id
+  network       = google_compute_network.jenkins_network.id
   region        = var.region
 }
 
 resource "google_compute_firewall" "allow_iap_ssh" {
   name    = "allow-iap-ssh"
-  network = google_compute_network.mautic_network.name
+  network = google_compute_network.jenkins_network.name
 
   allow {
     protocol = "tcp"
@@ -54,12 +54,12 @@ resource "google_compute_firewall" "allow_iap_ssh" {
   }
 
   source_ranges = ["35.235.240.0/20"]
-  target_tags   = ["mautic-vm"]
+  target_tags   = ["jenkins-vm"]
 }
 
 resource "google_compute_firewall" "allow_lb_https" {
   name    = "allow-lb-https"
-  network = google_compute_network.mautic_network.name
+  network = google_compute_network.jenkins_network.name
 
   allow {
     protocol = "tcp"
@@ -68,49 +68,49 @@ resource "google_compute_firewall" "allow_lb_https" {
 
   # Source ranges for Google Cloud Load Balancer health checks and traffic
   source_ranges = ["130.211.0.0/22", "35.191.0.0/16"]
-  target_tags   = ["mautic-vm"]
+  target_tags   = ["jenkins-vm"]
 }
 
 # Create custom service account and IAM bindings
-resource "google_service_account" "mautic_sa" {
-  account_id   = "mautic-vm-sa"
-  display_name = "Mautic VM Service Account"
+resource "google_service_account" "jenkins_sa" {
+  account_id   = "jenkins-vm-sa"
+  display_name = "Jenkins VM Service Account"
   
   depends_on   = [google_project_service.enabled_apis]
 }
 
-resource "google_project_iam_member" "mautic_sa_log_writer" {
+resource "google_project_iam_member" "jenkins_sa_log_writer" {
   project = var.project_id
   role    = "roles/logging.logWriter"
-  member  = "serviceAccount:${google_service_account.mautic_sa.email}"
+  member  = "serviceAccount:${google_service_account.jenkins_sa.email}"
 }
 
-resource "google_project_iam_member" "mautic_sa_monitoring_writer" {
+resource "google_project_iam_member" "jenkins_sa_monitoring_writer" {
   project = var.project_id
   role    = "roles/monitoring.metricWriter"
-  member  = "serviceAccount:${google_service_account.mautic_sa.email}"
+  member  = "serviceAccount:${google_service_account.jenkins_sa.email}"
 }
 
 # Create Compute instance 
-resource "google_compute_instance" "mautic_vm" {
-  name         = "mautic-vm"
+resource "google_compute_instance" "jenkins_vm" {
+  name         = "jenkins-vm"
   machine_type = "e2-medium"
   zone         = var.zone
-  tags         = ["mautic-vm"]
+  tags         = ["jenkins-vm"]
 
   boot_disk {
     initialize_params {
-      image = "bitnami-launchpad/mautic"
+      image = "bitnami-launchpad/jenkins"
     }
   }
 
   network_interface {
-    network    = google_compute_network.mautic_network.id
-    subnetwork = google_compute_subnetwork.mautic_subnet.id
+    network    = google_compute_network.jenkins_network.id
+    subnetwork = google_compute_subnetwork.jenkins_subnet.id
   }
 
   service_account {
-    email  = google_service_account.mautic_sa.email
+    email  = google_service_account.jenkins_sa.email
     scopes = ["cloud-platform"]
   }
 
@@ -130,10 +130,10 @@ resource "google_compute_instance" "mautic_vm" {
 }
 
 # Create unmanaged instance group
-resource "google_compute_instance_group" "mautic_uig" {
-  name        = "mautic-ig"
+resource "google_compute_instance_group" "jenkins_uig" {
+  name        = "jenkins-ig"
   zone        = var.zone
-  instances   = [google_compute_instance.mautic_vm.id]
+  instances   = [google_compute_instance.jenkins_vm.id]
   named_port {
     name = "http"
     port = 80
@@ -145,8 +145,8 @@ resource "google_compute_instance_group" "mautic_uig" {
 }
 
 # Create HTTPS Load Balancer related resources
-resource "google_compute_health_check" "mautic_hc" {
-  name               = "mautic-health-check"
+resource "google_compute_health_check" "jenkins_hc" {
+  name               = "jenkins-health-check"
   check_interval_sec = 10
   timeout_sec        = 5
   healthy_threshold  = 2
@@ -157,25 +157,25 @@ resource "google_compute_health_check" "mautic_hc" {
   }
 }
 
-resource "google_compute_backend_service" "mautic_backend" {
-  name                            = "mautic-backend"
+resource "google_compute_backend_service" "jenkins_backend" {
+  name                            = "jenkins-backend"
   port_name                       = "http"
   protocol                        = "HTTP"
   load_balancing_scheme           = "EXTERNAL"
   timeout_sec                     = 30
-  health_checks                   = [google_compute_health_check.mautic_hc.id]
+  health_checks                   = [google_compute_health_check.jenkins_hc.id]
   backend {
-    group = google_compute_instance_group.mautic_uig.id
+    group = google_compute_instance_group.jenkins_uig.id
   }
 }
 
-resource "google_compute_url_map" "mautic_url_map" {
-  name            = "mautic-url-map"
-  default_service = google_compute_backend_service.mautic_backend.id
+resource "google_compute_url_map" "jenkins_url_map" {
+  name            = "jenkins-url-map"
+  default_service = google_compute_backend_service.jenkins_backend.id
 }
 
-resource "google_compute_url_map" "mautic_redirect_map" {
-  name            = "mautic-redirect-map"
+resource "google_compute_url_map" "jenkins_redirect_map" {
+  name            = "jenkins-redirect-map"
   
   default_url_redirect {
     https_redirect         = true
@@ -184,40 +184,40 @@ resource "google_compute_url_map" "mautic_redirect_map" {
   }
 }
 
-resource "google_compute_global_address" "mautic_ip" {
-  name = "mautic-ip"
+resource "google_compute_global_address" "jenkins_ip" {
+  name = "jenkins-ip"
 }
 
-resource "google_compute_managed_ssl_certificate" "mautic_cert" {
-  name = "mautic-cert"
+resource "google_compute_managed_ssl_certificate" "jenkins_cert" {
+  name = "jenkins-cert"
   managed {
     domains = [var.domain_name]
   }
 }
 
-resource "google_compute_target_https_proxy" "mautic_https_proxy" {
-  name             = "mautic-https-proxy"
-  url_map          = google_compute_url_map.mautic_url_map.id
-  ssl_certificates = [google_compute_managed_ssl_certificate.mautic_cert.id]
+resource "google_compute_target_https_proxy" "jenkins_https_proxy" {
+  name             = "jenkins-https-proxy"
+  url_map          = google_compute_url_map.jenkins_url_map.id
+  ssl_certificates = [google_compute_managed_ssl_certificate.jenkins_cert.id]
 }
 
-resource "google_compute_target_http_proxy" "mautic_http_proxy" {
-  name    = "mautic-http-proxy"
-  url_map = google_compute_url_map.mautic_redirect_map.id
+resource "google_compute_target_http_proxy" "jenkins_http_proxy" {
+  name    = "jenkins-http-proxy"
+  url_map = google_compute_url_map.jenkins_redirect_map.id
 }
 
-resource "google_compute_global_forwarding_rule" "mautic_https_forwarding_rule" {
+resource "google_compute_global_forwarding_rule" "jenkins_https_forwarding_rule" {
   name                  = "https-forwarding-rule"
-  target                = google_compute_target_https_proxy.mautic_https_proxy.id
+  target                = google_compute_target_https_proxy.jenkins_https_proxy.id
   port_range            = "443"
   load_balancing_scheme = "EXTERNAL"
   ip_protocol           = "TCP"
 }
 
-resource "google_compute_global_forwarding_rule" "mautic_http_forwarding_rule" {
+resource "google_compute_global_forwarding_rule" "jenkins_http_forwarding_rule" {
   name                  = "http-forwarding-rule"
-  target                = google_compute_target_http_proxy.mautic_http_proxy.id
-  ip_address            = google_compute_global_address.mautic_ip.id
+  target                = google_compute_target_http_proxy.jenkins_http_proxy.id
+  ip_address            = google_compute_global_address.jenkins_ip.id
   port_range            = "80"
   load_balancing_scheme = "EXTERNAL"
   ip_protocol           = "TCP"
