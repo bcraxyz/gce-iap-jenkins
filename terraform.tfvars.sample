@@ -1,4 +1,5 @@
 project_id  = "your-project-id"
 region      = "us-central1"
 zone        = "us-central1-a"
+image_name  = "jenkins-2-504-3-r0-debian-12-amd64"
 domain_name = "jenkins.yourdomain.com"
