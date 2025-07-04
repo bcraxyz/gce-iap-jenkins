@@ -18,6 +18,7 @@ resource "google_project_service" "enabled_apis" {
   for_each = toset([
     "compute.googleapis.com",
     "oslogin.googleapis.com",
+    "iam.googleapis.com",
     "iap.googleapis.com",
     "cloudresourcemanager.googleapis.com",
     "certificatemanager.googleapis.com"
