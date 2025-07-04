@@ -116,6 +116,16 @@ resource "google_compute_instance" "jenkins_vm" {
 
   metadata = {
     enable-oslogin = "TRUE"
+    # Add startup script to enable SSH
+    startup-script = <<-EOF
+      #!/bin/bash
+      # Remove the flag that prevents sshd from running
+      sudo rm -f /etc/ssh/sshd_not_to_be_run
+      # Enable and start the SSH service
+      sudo systemctl enable ssh
+      sudo systemctl start ssh
+      echo "SSH service enabled and started by startup script." >> /var/log/startup-script.log
+    EOF
   }
 
   shielded_instance_config {
