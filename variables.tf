@@ -1,18 +1,23 @@
 variable "project_id" {
-  description = "GCP Project ID"
+  description = "Google Cloud project ID"
   type        = string
 }
 
 variable "region" {
-  description = "GCP Region"
+  description = "Google Cloud region"
   type        = string
   default     = "us-central1"
 }
 
 variable "zone" {
-  description = "GCP Zone"
+  description = "Google Cloud zone"
   type        = string
   default     = "us-central1-a"
+}
+
+variable "image_name" {
+  description = "Compute Engine VM image name"
+  type        = string
 }
 
 variable "domain_name" {
