@@ -100,7 +100,7 @@ resource "google_compute_instance" "jenkins_vm" {
 
   boot_disk {
     initialize_params {
-      image = "bitnami-launchpad/jenkins"
+      image = var.image_name
     }
   }
 
