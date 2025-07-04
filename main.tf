@@ -225,20 +225,26 @@ resource "google_compute_global_forwarding_rule" "jenkins_http_forwarding_rule" 
 }
 
 # Grant the IAP-Secured Tunnel User, IAP-Secured Web User and OS Login User roles
-resource "google_project_iam_member" "iap_tunnel_accessor" {
-  project = var.project_id
-  role    = "roles/iap.tunnelResourceAccessor"
-  member  = "user:${var.iap_user_email}"
+resource "google_compute_instance_iam_member" "iap_tunnel_accessor" {
+  project       = var.project_id
+  zone          = var.zone
+  instance_name = google_compute_instance.jenkins_vm.name
+  role          = "roles/iap.tunnelResourceAccessor"
+  member        = "user:${var.iap_user_email}"
 }
 
-resource "google_project_iam_member" "iap_web_user" {
-  project = var.project_id
-  role    = "roles/iap.webServiceUser"
-  member  = "user:${var.iap_user_email}"
+resource "google_compute_instance_iam_member" "iap_web_user" {
+  project       = var.project_id
+  zone          = var.zone
+  instance_name = google_compute_instance.jenkins_vm.name
+  role          = "roles/iap.webServiceUser"
+  member        = "user:${var.iap_user_email}"
 }
 
-resource "google_project_iam_member" "os_login_user" {
-  project = var.project_id
-  role    = "roles/compute.osLogin"        # Use "roles/compute.osAdminLogin" instead for administrative (sudo) access
-  member  = "user:${var.iap_user_email}"
+resource "google_compute_instance_iam_member" "os_login_user" {
+  project       = var.project_id
+  zone          = var.zone
+  instance_name = google_compute_instance.jenkins_vm.name
+  role          = "roles/compute.osLogin"        # Use "roles/compute.osAdminLogin" instead for administrative (sudo) access
+  member        = "user:${var.iap_user_email}"
 }
