@@ -225,20 +225,24 @@ resource "google_compute_global_forwarding_rule" "jenkins_http_forwarding_rule" 
 }
 
 # Grant the IAP-Secured Tunnel User, IAP-Secured Web User and OS Login User roles
-resource "google_compute_instance_iam_member" "iap_tunnel_accessor" {
-  project       = var.project_id
-  zone          = var.zone
-  instance_name = google_compute_instance.jenkins_vm.name
-  role          = "roles/iap.tunnelResourceAccessor"
-  member        = "user:${var.iap_user_email}"
+resource "google_iap_tunnel_instance_iam_binding" "iap_tunnel_accessor" {
+  project  = var.project_id
+  zone     = var.zone
+  instance = google_compute_instance.jenkins_vm.name
+  role     = "roles/iap.tunnelResourceAccessor"
+  members  = [
+    "user:${var.iap_user_email}",
+  ]
 }
 
-resource "google_compute_instance_iam_member" "iap_web_user" {
+resource "google_iap_web_region_backend_service_iam_binding" "iap_web_user" {
   project       = var.project_id
-  zone          = var.zone
-  instance_name = google_compute_instance.jenkins_vm.name
-  role          = "roles/iap.webServiceUser"
-  member        = "user:${var.iap_user_email}"
+  region        = var.zone
+  web_region_backend_service = google_compute_backend_service.jenkins_backend.name
+  role          = "roles/iap.httpsResourceAccessor"
+  members       = [
+    "user:${var.iap_user_email}",
+  ]
 }
 
 resource "google_compute_instance_iam_member" "os_login_user" {
