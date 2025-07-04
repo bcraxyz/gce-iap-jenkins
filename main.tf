@@ -57,13 +57,13 @@ resource "google_compute_firewall" "allow_iap_ssh" {
   target_tags   = ["jenkins-vm"]
 }
 
-resource "google_compute_firewall" "allow_lb_https" {
-  name    = "allow-lb-https"
+resource "google_compute_firewall" "allow_health_check" {
+  name    = "allow-health-check"
   network = google_compute_network.jenkins_network.name
 
   allow {
     protocol = "tcp"
-    ports    = ["443"]
+    ports    = ["80", "443"]
   }
 
   # Source ranges for Google Cloud Load Balancer health checks and traffic
@@ -209,6 +209,7 @@ resource "google_compute_target_http_proxy" "jenkins_http_proxy" {
 resource "google_compute_global_forwarding_rule" "jenkins_https_forwarding_rule" {
   name                  = "https-forwarding-rule"
   target                = google_compute_target_https_proxy.jenkins_https_proxy.id
+  ip_address            = google_compute_global_address.jenkins_ip.id
   port_range            = "443"
   load_balancing_scheme = "EXTERNAL"
   ip_protocol           = "TCP"
