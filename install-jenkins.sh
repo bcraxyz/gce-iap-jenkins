@@ -90,7 +90,7 @@ done
 echo "Jenkins is available. Configuring Jenkins URL in XML..."
 
 JENKINS_HOME="/var/lib/jenkins"
-JENKINS_LOCATION_CONFIG="${JENKINS_HOME}/jenkins.model.JenkinsLocationConfiguration.xml"
+JENKINS_LOCATION_CONFIG="\${JENKINS_HOME}/jenkins.model.JenkinsLocationConfiguration.xml"
 
 # Ensure the directory exists and has correct permissions
 sudo mkdir -p "$JENKINS_HOME"
