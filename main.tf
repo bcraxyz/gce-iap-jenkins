@@ -151,10 +151,10 @@ resource "google_compute_instance_group" "jenkins_uig" {
 # Create HTTPS Load Balancer related resources
 resource "google_compute_health_check" "jenkins_hc" {
   name               = "jenkins-health-check"
-  check_interval_sec = 10
-  timeout_sec        = 5
+  check_interval_sec = 30
+  timeout_sec        = 10
   healthy_threshold  = 2
-  unhealthy_threshold = 3
+  unhealthy_threshold = 5
   http_health_check {
     port = 80
     request_path = "/"
