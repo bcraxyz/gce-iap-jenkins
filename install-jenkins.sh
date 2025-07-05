@@ -114,8 +114,8 @@ fi
 echo "Installing xmlstarlet for XML modification..."
 sudo apt-get install -y xmlstarlet
 
-echo "Modifying Jenkins URL in ${JENKINS_LOCATION_CONFIG} to https://${DOMAIN_NAME}/"
-sudo xmlstarlet ed --inplace -u "/jenkins.model.JenkinsLocationConfiguration/jenkinsUrl" -v "https://${DOMAIN_NAME}/" "$JENKINS_LOCATION_CONFIG"
+echo "Modifying Jenkins URL in ${JENKINS_LOCATION_CONFIG} to https://${domain_name}/"
+sudo xmlstarlet ed --inplace -u "/jenkins.model.JenkinsLocationConfiguration/jenkinsUrl" -v "https://${domain_name}/" "$JENKINS_LOCATION_CONFIG"
 
 # Verify the change (optional)
 echo "Verifying Jenkins URL in XML:"
