@@ -44,11 +44,11 @@ sudo apt-get install -y nginx
 echo "Configuring Nginx for Jenkins reverse proxy..."
 # Create Nginx configuration for Jenkins
 # Using <<'EOF' to prevent shell variable expansion inside the heredoc
-# Terraform will replace ${var.domain_name} before the script runs on the VM.
+# Terraform will replace ${domain_name} before the script runs on the VM.
 sudo tee /etc/nginx/sites-available/jenkins <<EOF
 server {
     listen 80;
-    server_name ${var.domain_name}; # This will be replaced by Terraform
+    server_name ${domain_name}; # This will be replaced by Terraform
 
     location / {
         proxy_pass http://127.0.0.1:8080; # Jenkins default port
