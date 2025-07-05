@@ -138,6 +138,11 @@ resource "google_compute_instance" "jenkins_vm" {
       sudo apt-get update
       sudo apt-get install -y jenkins
 
+      # Reload systemd daemon to recognize new Jenkins service unit file
+      sudo systemctl daemon-reload
+      # Give systemd a moment to process (optional, but can help with timing)
+      sleep 5
+
       # Start and enable Jenkins service
       sudo systemctl start jenkins
       sudo systemctl enable jenkins
@@ -250,6 +255,30 @@ resource "google_compute_global_forwarding_rule" "jenkins_http_forwarding_rule" 
   port_range            = "80"
   load_balancing_scheme = "EXTERNAL"
   ip_protocol           = "TCP"
+}
+
+# Create a Cloud Router, and configure Cloud NAT on the router
+resource "google_compute_router" "jenkins_router" {
+  name    = "jenkins-router"
+  region  = var.region
+  network = google_compute_network.jenkins_network.id
+}
+
+resource "google_compute_router_nat" "jenkins_nat" {
+  name                          = "jenkins-nat"
+  router                        = google_compute_router.jenkins_router.name
+  region                        = google_compute_router.jenkins_router.region
+  nat_ip_allocate_option        = "AUTO_ONLY"
+  source_subnetwork_ip_ranges_to_nat = "ALL_SUBNETWORKS_ALL_IP_RANGES"
+  log_config {
+    enable = true
+    filter = "ERRORS_ONLY"
+  }
+
+  subnetwork {
+    name = google_compute_subnetwork.jenkins_subnet.id
+    source_ip_ranges_to_nat = ["ALL_IP_RANGES"]
+  }
 }
 
 # Grant the IAP-Secured Tunnel User, IAP-Secured Web User and OS Login User roles
