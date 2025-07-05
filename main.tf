@@ -116,15 +116,33 @@ resource "google_compute_instance" "jenkins_vm" {
 
   metadata = {
     enable-oslogin = "TRUE"
-    # Add startup script to enable SSH
+    # Startup script to install Jenkins LTS
     startup-script = <<-EOF
       #!/bin/bash
-      # Remove the flag that prevents sshd from running
-      sudo rm -f /etc/ssh/sshd_not_to_be_run
-      # Enable and start the SSH service
-      sudo systemctl enable ssh
-      sudo systemctl start ssh
-      echo "SSH service enabled and started by startup script." >> /var/log/startup-script.log
+      # Install necessary packages for Jenkins
+      sudo apt-get update
+      sudo apt-get install -y openjdk-17-jdk # Jenkins requires Java 11 or 17
+      sudo apt-get install -y ca-certificates curl gnupg
+
+      # Add Jenkins GPG key
+      sudo mkdir -p /etc/apt/keyrings
+      curl -fsSL https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key | sudo tee \
+        /etc/apt/keyrings/jenkins-keyring.asc > /dev/null
+
+      # Add Jenkins APT repository
+      echo "deb [signed-by=/etc/apt/keyrings/jenkins-keyring.asc] \
+        https://pkg.jenkins.io/debian-stable binary/" | sudo tee \
+        /etc/apt/sources.list.d/jenkins.list > /dev/null
+
+      # Update apt cache and install Jenkins
+      sudo apt-get update
+      sudo apt-get install -y jenkins
+
+      # Start and enable Jenkins service
+      sudo systemctl start jenkins
+      sudo systemctl enable jenkins
+
+      echo "Jenkins LTS installation and startup script completed." >> /var/log/startup-script.log
     EOF
   }
 
