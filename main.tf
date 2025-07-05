@@ -274,11 +274,6 @@ resource "google_compute_router_nat" "jenkins_nat" {
     enable = true
     filter = "ERRORS_ONLY"
   }
-
-  subnetwork {
-    name = google_compute_subnetwork.jenkins_subnet.id
-    source_ip_ranges_to_nat = ["ALL_IP_RANGES"]
-  }
 }
 
 # Grant the IAP-Secured Tunnel User, IAP-Secured Web User and OS Login User roles
