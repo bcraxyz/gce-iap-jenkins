@@ -33,7 +33,7 @@ done
 
 # Configure Jenkins URL (update for port 80)
 JENKINS_HOME="/var/lib/jenkins"
-JENKINS_LOCATION_CONFIG="${JENKINS_HOME}/jenkins.model.JenkinsLocationConfiguration.xml"
+JENKINS_LOCATION_CONFIG="$JENKINS_HOME/jenkins.model.JenkinsLocationConfiguration.xml"
 
 sudo mkdir -p "$JENKINS_HOME"
 sudo chown jenkins:jenkins "$JENKINS_HOME"
