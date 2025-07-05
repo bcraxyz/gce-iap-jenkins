@@ -116,39 +116,10 @@ resource "google_compute_instance" "jenkins_vm" {
 
   metadata = {
     enable-oslogin = "TRUE"
-    # Startup script to install Jenkins LTS
-    startup-script = <<-EOF
-      #!/bin/bash
-      # Install necessary packages for Jenkins
-      sudo apt-get update
-      sudo apt-get install -y openjdk-17-jdk # Jenkins requires Java 11 or 17
-      sudo apt-get install -y ca-certificates curl gnupg
-
-      # Add Jenkins GPG key
-      sudo mkdir -p /etc/apt/keyrings
-      curl -fsSL https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key | sudo tee \
-        /etc/apt/keyrings/jenkins-keyring.asc > /dev/null
-
-      # Add Jenkins APT repository
-      echo "deb [signed-by=/etc/apt/keyrings/jenkins-keyring.asc] \
-        https://pkg.jenkins.io/debian-stable binary/" | sudo tee \
-        /etc/apt/sources.list.d/jenkins.list > /dev/null
-
-      # Update apt cache and install Jenkins
-      sudo apt-get update
-      sudo apt-get install -y jenkins
-
-      # Reload systemd daemon to recognize new Jenkins service unit file
-      sudo systemctl daemon-reload
-      # Give systemd a moment to process (optional, but can help with timing)
-      sleep 5
-
-      # Start and enable Jenkins service
-      sudo systemctl start jenkins
-      sudo systemctl enable jenkins
-
-      echo "Jenkins LTS installation and startup script completed." >> /var/log/startup-script.log
-    EOF
+    # Use templatefile to interpolate Terraform variables into startup script
+    startup-script = templatefile("${path.module}/install-jenkins.sh", {
+      domain_name = var.domain_name
+    })
   }
 
   shielded_instance_config {
